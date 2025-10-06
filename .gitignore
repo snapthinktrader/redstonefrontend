@@ -1,0 +1,186 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Additional Flutter/Mobile specific
+*.apk
+*.ipa
+*.aab
+*.so
+*.zip
+*.tar.gz
+
+# iOS specific
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/DerivedData/
+
+# Android specific
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/key.properties
+**/android/**/build/
+**/android/**/kotlin
+**/android/.idea
+
+# Web specific
+/web/build/
+lib/generated_plugin_registrant.dart
+
+# Test related
+test/widget_test.dart.bak
+
+# Environment and secrets
+.env
+*.env
+config.properties
+keystore.properties
+google-services.json
+GoogleService-Info.plist
+
+# Build outputs
+redstone_*.apk
+redstone_*.ipa
+redstone_*.aab
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Temporary files
+tmp/
+temp/
+
+# Documentation
+docs/build/
+
+# Node.js (if using for any build tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Dependency files
+pubspec.lock
+.packages
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# Generated files
+lib/generated/
+lib/*.g.dart
+lib/**/*.g.dart
+lib/*.freezed.dart
+lib/**/*.freezed.dart
+
+# Build directories (comprehensive)
+build/
+.build/
+out/
+dist/
+target/
+bin/
+obj/
+
+# Flutter build outputs (all platforms)
+build/app/
+build/ios/
+build/linux/
+build/macos/
+build/web/
+build/windows/
+
+# Additional dependency and cache directories
+.dart_tool/cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# Logs
+*.log
+logs/
+
+# Archives
+*.tar.gz
+*.zip
+*.rar
+*.7z

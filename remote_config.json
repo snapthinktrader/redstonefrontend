@@ -1,0 +1,12 @@
+{
+  "backend_url": "https://redstonebackend-qzyfnbktn-snaps-projects-656f28bb.vercel.app/api",
+  "app_version": "1.0.0",
+  "maintenance_mode": false,
+  "features": {
+    "email_verification": true,
+    "biometric_login": true,
+    "referral_system": true
+  },
+  "updated_at": "2025-10-06T00:30:00Z",
+  "update_message": "Backend updated with email verification fixes"
+}
