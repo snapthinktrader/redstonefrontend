@@ -265,7 +265,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getUserStats() async {
     try {
-      final response = await _dio.get('/users/stats');
+      final response = await _dio.get('/api/user/dashboard');
       if (response.statusCode == 200) {
         return response.data['data'];
       } else {
@@ -280,7 +280,173 @@ class ApiService {
     }
   }
 
+  // New Payment API Methods
   Future<Map<String, dynamic>> createDeposit({
+    required double amount,
+    String network = 'bsc',
+  }) async {
+    try {
+      final response = await _dio.post('/payment/deposits', data: {
+        'amount': amount,
+        'network': network,
+      });
+
+      if (response.statusCode == 201) {
+        return response.data['data'];
+      } else {
+        throw Exception(response.data['message'] ?? 'Deposit creation failed');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Deposit creation failed');
+      } else {
+        throw Exception('Network error during deposit creation');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> getDepositStatus(String depositId) async {
+    try {
+      final response = await _dio.post('/payment/deposits/$depositId/check');
+
+      if (response.statusCode == 200) {
+        return response.data['data'];
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to check deposit status');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Failed to check deposit status');
+      } else {
+        throw Exception('Network error while checking deposit status');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> cancelDeposit(String depositId) async {
+    try {
+      final response = await _dio.delete('/payment/deposits/$depositId/cancel');
+
+      if (response.statusCode == 200) {
+        return response.data['data'];
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to cancel deposit');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Failed to cancel deposit');
+      } else {
+        throw Exception('Network error while cancelling deposit');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> sweepDeposit(String depositId) async {
+    try {
+      final response = await _dio.post('/payment/deposits/$depositId/sweep');
+
+      if (response.statusCode == 200) {
+        return response.data['data'];
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to sweep deposit');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Failed to sweep deposit');
+      } else {
+        throw Exception('Network error while sweeping deposit');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> getMyDeposits() async {
+    try {
+      final response = await _dio.get('/payment/deposits');
+      return response.data;
+    } catch (e) {
+      print('Error fetching my deposits: $e');
+      throw Exception('Failed to fetch deposits: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getDeposits({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await _dio.get('/payment/deposits', queryParameters: {
+        'page': page,
+        'limit': limit,
+      });
+
+      if (response.statusCode == 200) {
+        return response.data['data'];
+      } else {
+        throw Exception('Failed to fetch deposits');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Failed to fetch deposits');
+      } else {
+        throw Exception('Network error while fetching deposits');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> createWithdrawalNew({
+    required double amount,
+    required String toAddress,
+    String network = 'bsc',
+    String? userNotes,
+  }) async {
+    try {
+      final response = await _dio.post('/payment/withdrawals', data: {
+        'amount': amount,
+        'toAddress': toAddress,
+        'network': network,
+        if (userNotes != null) 'userNotes': userNotes,
+      });
+
+      if (response.statusCode == 201) {
+        return response.data['data'];
+      } else {
+        throw Exception(response.data['message'] ?? 'Withdrawal creation failed');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Withdrawal creation failed');
+      } else {
+        throw Exception('Network error during withdrawal creation');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> getWithdrawals({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await _dio.get('/payment/withdrawals', queryParameters: {
+        'page': page,
+        'limit': limit,
+      });
+
+      if (response.statusCode == 200) {
+        return response.data['data'];
+      } else {
+        throw Exception('Failed to fetch withdrawals');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Failed to fetch withdrawals');
+      } else {
+        throw Exception('Network error while fetching withdrawals');
+      }
+    }
+  }
+
+  // Legacy deposit method - keeping for compatibility
+  Future<Map<String, dynamic>> createDepositLegacy({
     required double amount,
     required String cryptocurrency,
     required String paymentMethod,
@@ -306,7 +472,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> createWithdrawal({
+  // Legacy withdrawal method - keeping for compatibility
+  Future<Map<String, dynamic>> createWithdrawalLegacy({
     required double amount,
     required String cryptocurrency,
     required String walletAddress,

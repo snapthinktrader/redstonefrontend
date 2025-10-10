@@ -45,11 +45,16 @@ class StorageHelper {
   }
 
   Future<String?> getToken() async {
-    final encryptedToken = _secureBox.get(_tokenKey);
-    if (encryptedToken != null) {
-      return _decryptData(encryptedToken);
+    try {
+      final encryptedToken = _secureBox.get(_tokenKey);
+      if (encryptedToken != null) {
+        return _decryptData(encryptedToken);
+      }
+      return null;
+    } catch (e) {
+      // Storage not initialized or error accessing storage
+      return null;
     }
-    return null;
   }
 
   Future<void> saveRefreshToken(String refreshToken) async {
@@ -57,11 +62,16 @@ class StorageHelper {
   }
 
   Future<String?> getRefreshToken() async {
-    final encryptedToken = _secureBox.get(_refreshTokenKey);
-    if (encryptedToken != null) {
-      return _decryptData(encryptedToken);
+    try {
+      final encryptedToken = _secureBox.get(_refreshTokenKey);
+      if (encryptedToken != null) {
+        return _decryptData(encryptedToken);
+      }
+      return null;
+    } catch (e) {
+      // Storage not initialized or error accessing storage
+      return null;
     }
-    return null;
   }
 
   Future<void> saveTokens(String accessToken, String refreshToken) async {

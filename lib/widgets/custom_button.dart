@@ -63,14 +63,21 @@ class CustomButton extends StatelessWidget {
               color: backgroundColor ?? AppTheme.primaryColor,
             ),
             padding: padding ?? const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 16,
+              horizontal: 16,
+              vertical: 12,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          child: child,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: child,
+          ),
         ),
       );
     }
@@ -86,14 +93,21 @@ class CustomButton extends StatelessWidget {
           elevation: 2,
           shadowColor: AppTheme.primaryColor.withValues(alpha: 0.3),
           padding: padding ?? const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 16,
+            horizontal: 16,
+            vertical: 12,
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        child: child,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: child,
+        ),
       ),
     );
   }

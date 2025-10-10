@@ -91,7 +91,9 @@ class _ReferralScreenState extends State<ReferralScreen> {
         elevation: 1,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppTheme.mediumColor),
-          onPressed: () => context.go('/dashboard'),
+          onPressed: () => Navigator.of(context).canPop() 
+              ? Navigator.of(context).pop() 
+              : context.go('/dashboard'),
         ),
         title: const Text(
           'My Referrals',
@@ -342,13 +344,13 @@ class _ReferralScreenState extends State<ReferralScreen> {
               context.go('/dashboard');
               break;
             case 1:
-              context.go('/wallet');
+              context.push('/wallet');
               break;
             case 2:
               // Already on referrals
               break;
             case 3:
-              context.go('/profile');
+              context.push('/profile');
               break;
           }
         },

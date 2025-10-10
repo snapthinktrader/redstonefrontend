@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/auth_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../models/user.dart';
@@ -54,7 +53,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         elevation: 1,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppTheme.mediumColor),
-          onPressed: () => context.go('/dashboard'),
+          onPressed: () => Navigator.of(context).canPop() 
+              ? Navigator.of(context).pop() 
+              : context.go('/dashboard'),
         ),
         title: const Text(
           'Profile & Settings',
@@ -258,10 +259,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               context.go('/dashboard');
               break;
             case 1:
-              context.go('/wallet');
+              context.push('/wallet');
               break;
             case 2:
-              context.go('/referrals');
+              context.push('/referrals');
               break;
             case 3:
               // Already on profile

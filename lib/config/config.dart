@@ -1,11 +1,9 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class Config {
   // Backend URL - Using stable production domain that never changes!
-  static const String _stableUrl = 'https://red-stone-backend.vercel.app/api';
-  static const String _fallbackUrl = 'https://redstonebackend-qzyfnbktn-snaps-projects-656f28bb.vercel.app/api';
+  static const String _newDeploymentUrl = 'https://redstonebackend-ipfcfcoqr-snaps-projects-656f28bb.vercel.app/api';
+  static const String _fallbackUrl = 'https://redstonebackend-aj7xoowmr-snaps-projects-656f28bb.vercel.app/api';
   static const String _configKey = 'cached_backend_url';
   static const String _lastUpdateKey = 'config_last_update';
   
@@ -34,9 +32,9 @@ class Config {
       return cachedUrl;
     }
     
-    // Use stable URL first, fallback to deployment-specific URL
-    _cachedUrl = _stableUrl;
-    return _stableUrl;
+    // Use the latest deployment URL first, then fallback
+    _cachedUrl = _newDeploymentUrl;
+    return _newDeploymentUrl;
   }
   
   /// Legacy sync method for backward compatibility - now uses stable URL!

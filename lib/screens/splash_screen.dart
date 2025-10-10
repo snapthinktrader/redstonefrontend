@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/app_theme.dart';
+import '../utils/storage_helper.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -41,12 +42,31 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    // Navigate to login after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
+    // Check authentication status and navigate accordingly
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    // Wait for animation to complete
+    await Future.delayed(const Duration(seconds: 3));
+    
+    if (!mounted) return;
+
+    try {
+      final storageHelper = StorageHelper();
+      final token = await storageHelper.getToken();
+      
+      if (token != null && token.isNotEmpty) {
+        // User is logged in, go to dashboard
+        context.go('/dashboard');
+      } else {
+        // User not logged in, go to login
         context.go('/login');
       }
-    });
+    } catch (e) {
+      // Error checking auth, go to login
+      context.go('/login');
+    }
   }
 
   @override

@@ -155,7 +155,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                   child: CustomButton(
                                     text: 'Deposit',
                                     icon: Icons.download,
-                                    onPressed: () => context.go('/deposit'),
+                                    onPressed: () => context.push('/deposit'),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -164,7 +164,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                     text: 'Withdraw',
                                     icon: Icons.upload,
                                     isOutlined: true,
-                                    onPressed: () => context.go('/withdraw'),
+                                    onPressed: () => context.push('/withdraw'),
                                   ),
                                 ),
                               ],
@@ -279,10 +279,10 @@ class _WalletScreenState extends State<WalletScreen> {
               // Already on wallet
               break;
             case 2:
-              context.go('/referrals');
+              context.push('/referrals');
               break;
             case 3:
-              context.go('/profile');
+              context.push('/profile');
               break;
           }
         },

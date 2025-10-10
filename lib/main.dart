@@ -9,11 +9,24 @@ import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/wallet/wallet_screen.dart';
 import 'screens/wallet/deposit_screen.dart';
 import 'screens/wallet/withdraw_screen.dart';
+import 'screens/wallet/pending_deposits_screen.dart';
 import 'screens/referral/referral_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'utils/app_theme.dart';
+import 'utils/storage_helper.dart';
+import 'utils/performance_optimizer.dart';
+import 'screens/auth_guard.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize storage before running the app
+  final storageHelper = StorageHelper();
+  await storageHelper.init();
+  
+  // Set performance mode based on device capabilities
+  AppPerformanceSettings.setHighPerformanceMode();
+  
   runApp(
     const ProviderScope(
       child: RedStoneApp(),
@@ -31,46 +44,72 @@ class RedStoneApp extends ConsumerWidget {
       routes: [
         GoRoute(
           path: '/splash',
-          builder: (context, state) => const SplashScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const SplashScreen(),
+          ),
         ),
         GoRoute(
           path: '/login',
-          builder: (context, state) => const LoginScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const LoginScreen(),
+          ),
         ),
         GoRoute(
           path: '/signup',
-          builder: (context, state) => const SignupScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const SignupScreen(),
+          ),
         ),
         GoRoute(
           path: '/email-verification/:email',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final email = state.pathParameters['email'] ?? '';
-            return EmailVerificationScreen(email: email);
+            return _buildPageWithTransition(
+              context, state, EmailVerificationScreen(email: email),
+            );
           },
         ),
         GoRoute(
           path: '/dashboard',
-          builder: (context, state) => const DashboardScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const AuthGuard(child: DashboardScreen()),
+          ),
         ),
         GoRoute(
           path: '/wallet',
-          builder: (context, state) => const WalletScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const AuthGuard(child: WalletScreen()),
+          ),
         ),
         GoRoute(
           path: '/deposit',
-          builder: (context, state) => const DepositScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const AuthGuard(child: DepositScreen()),
+          ),
         ),
         GoRoute(
           path: '/withdraw',
-          builder: (context, state) => const WithdrawScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const AuthGuard(child: WithdrawScreen()),
+          ),
+        ),
+        GoRoute(
+          path: '/pending-deposits',
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const AuthGuard(child: PendingDepositsScreen()),
+          ),
         ),
         GoRoute(
           path: '/referrals',
-          builder: (context, state) => const ReferralScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const AuthGuard(child: ReferralScreen()),
+          ),
         ),
         GoRoute(
           path: '/profile',
-          builder: (context, state) => const ProfileScreen(),
+          pageBuilder: (context, state) => _buildPageWithTransition(
+            context, state, const AuthGuard(child: ProfileScreen()),
+          ),
         ),
       ],
     );
@@ -80,6 +119,48 @@ class RedStoneApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      // Add builder to wrap the entire app with optimizations
+      builder: (context, child) {
+        return MediaQuery(
+          // Disable animations on low-end devices for better performance
+          data: MediaQuery.of(context).copyWith(
+            textScaleFactor: 1.0, // Prevent text scaling issues
+          ),
+          child: child ?? Container(),
+        );
+      },
+    );
+  }
+
+  // Custom page transition builder for smooth animations
+  Page<void> _buildPageWithTransition(
+    BuildContext context,
+    GoRouterState state,
+    Widget child,
+  ) {
+    return CustomTransitionPage<void>(
+      key: state.pageKey,
+      child: PerformanceOptimizer(child: child),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        if (!AppPerformanceSettings.enableTransitions) {
+          return child;
+        }
+
+        // Use slide transition for better performance than fade
+        const begin = Offset(0.1, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeOutQuart;
+
+        var tween = Tween(begin: begin, end: end).chain(
+          CurveTween(curve: curve),
+        );
+
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      },
+      transitionDuration: AppPerformanceSettings.transitionDuration,
     );
   }
 }

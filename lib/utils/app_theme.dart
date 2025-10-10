@@ -24,6 +24,11 @@ class AppTheme {
   static const Color errorColor = Color(0xFFE53935); // Same as primary red
   static const Color warningColor = Color(0xFFF59E0B); // Amber-500
   static const Color infoColor = Color(0xFF3B82F6); // Blue-500
+  
+  // Additional colors for flutter app compatibility
+  static const Color greyColor = Color(0xFF9CA3AF); // Gray-400
+  static const Color cardColor = Color(0xFFFFFFFF); // White for cards
+  static const Color borderColor = Color(0xFFE5E7EB); // Gray-200 for borders
 
   // Card decoration - Matching your HTML design shadow
   static BoxDecoration get cardDecoration => BoxDecoration(

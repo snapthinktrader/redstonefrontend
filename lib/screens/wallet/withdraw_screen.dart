@@ -104,7 +104,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
         shadowColor: Colors.black.withOpacity(0.1),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppTheme.darkColor),
-          onPressed: () => context.go('/dashboard'),
+          onPressed: () => Navigator.of(context).canPop() 
+              ? Navigator.of(context).pop() 
+              : context.go('/dashboard'),
         ),
         title: Row(
           children: [

@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../models/transaction.dart';
 import '../models/referral.dart';
 import '../config/config.dart';
+import '../utils/storage_helper.dart';
 
 class AuthService {
   static String get baseUrl => Config.baseUrl;
@@ -104,14 +104,18 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // Save token and user data
-        await _saveAuthData(data['data']['accessToken'], data['data']['user']);
+        // Save tokens and user data
+        final accessToken = data['data']['accessToken'];
+        final refreshToken = data['data']['refreshToken'] ?? '';
+        final user = data['data']['user'];
+        
+        await _saveAuthData(accessToken, refreshToken, user);
         
         return {
           'success': true,
           'message': 'Login successful',
-          'user': data['data']['user'],
-          'token': data['data']['accessToken'],
+          'user': user,
+          'token': accessToken,
         };
       } else {
         return {
@@ -248,7 +252,7 @@ class AuthService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/transaction/user-transactions'),
+        Uri.parse('$baseUrl/transactions'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -299,37 +303,40 @@ class AuthService {
 
   // Logout user
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(tokenKey);
-    await prefs.remove(userKey);
+    final storageHelper = StorageHelper();
+    await storageHelper.clearAuthData();
   }
 
   // Check if user is logged in
   Future<bool> isLoggedIn() async {
-    final token = await getToken();
-    return token != null;
+    final storageHelper = StorageHelper();
+    final token = await storageHelper.getToken();
+    return token != null && token.isNotEmpty;
   }
 
   // Get stored auth token
   Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(tokenKey);
+    final storageHelper = StorageHelper();
+    return await storageHelper.getToken();
   }
 
   // Get stored user data
   Future<User?> getUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userData = prefs.getString(userKey);
+    final storageHelper = StorageHelper();
+    final userData = await storageHelper.getUserData();
     if (userData != null) {
-      return User.fromJson(jsonDecode(userData));
+      return User.fromJson(userData);
     }
     return null;
   }
 
   // Save auth data to local storage
-  Future<void> _saveAuthData(String token, Map<String, dynamic> userData) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(tokenKey, token);
-    await prefs.setString(userKey, jsonEncode(userData));
+  Future<void> _saveAuthData(String accessToken, String refreshToken, Map<String, dynamic> userData) async {
+    final storageHelper = StorageHelper();
+    await storageHelper.saveToken(accessToken);
+    if (refreshToken.isNotEmpty) {
+      await storageHelper.saveRefreshToken(refreshToken);
+    }
+    await storageHelper.saveUserData(userData);
   }
 }
