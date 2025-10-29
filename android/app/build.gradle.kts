@@ -1,5 +1,8 @@
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -38,6 +41,19 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
         }
+    }
+
+    // Custom APK naming
+    applicationVariants.all {
+        val variant = this
+        variant.outputs
+            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+            .forEach { output ->
+                val versionName = variant.versionName
+                val buildType = variant.buildType.name
+                val outputFileName = "RedStone-v${versionName}-${buildType}.apk"
+                output.outputFileName = outputFileName
+            }
     }
 }
 

@@ -265,7 +265,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getUserStats() async {
     try {
-      final response = await _dio.get('/api/user/dashboard');
+      final response = await _dio.get('/api/users/dashboard');
       if (response.statusCode == 200) {
         return response.data['data'];
       } else {
@@ -441,6 +441,24 @@ class ApiService {
         throw Exception(e.response!.data['message'] ?? 'Failed to fetch withdrawals');
       } else {
         throw Exception('Network error while fetching withdrawals');
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> getWithdrawalLimits() async {
+    try {
+      final response = await _dio.get('/payment/withdrawal-limits');
+
+      if (response.statusCode == 200) {
+        return response.data['data'];
+      } else {
+        throw Exception('Failed to fetch withdrawal limits');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(e.response!.data['message'] ?? 'Failed to fetch withdrawal limits');
+      } else {
+        throw Exception('Network error while fetching withdrawal limits');
       }
     }
   }

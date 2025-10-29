@@ -33,25 +33,25 @@ class _PendingDepositsScreenState extends State<PendingDepositsScreen> {
   // Auto-refresh every 30 seconds for pending deposits
   static const Duration _autoRefreshInterval = Duration(seconds: 30);
 
-  final Map<String, Map<String, String>> _networks = {
-    'eth': {
-      'name': 'Ethereum',
-      'symbol': 'ETH',
+    final Map<String, Map<String, String>> networkConfig = {
+    'ethereum': {
+      'name': 'ERC-20 (Ethereum)',
+      'symbol': 'USDT',
       'color': '0xFF627EEA',
     },
     'bsc': {
-      'name': 'BSC',
-      'symbol': 'BNB',
+      'name': 'BEP-20 (BSC)',
+      'symbol': 'USDT',
       'color': '0xFFF3BA2F',
     },
     'polygon': {
-      'name': 'Polygon',
-      'symbol': 'MATIC',
+      'name': 'Polygon (MATIC)',
+      'symbol': 'USDT',
       'color': '0xFF8247E5',
     },
     'tron': {
-      'name': 'Tron',
-      'symbol': 'TRX',
+      'name': 'TRC-20 (Tron)',
+      'symbol': 'USDT',
       'color': '0xFFFF0013',
     },
   };
@@ -387,7 +387,7 @@ class _PendingDepositsScreenState extends State<PendingDepositsScreen> {
   }
 
   Widget _buildDepositCard(Deposit deposit) {
-    final networkInfo = _networks[deposit.network]!;
+    final networkInfo = networkConfig[deposit.network]!;
     final statusColor = _getStatusColor(deposit.status);
     
     return Container(
@@ -551,7 +551,7 @@ class _PendingDepositsScreenState extends State<PendingDepositsScreen> {
 
   Widget _buildDepositDetails() {
     final deposit = _selectedDeposit!;
-    final networkInfo = _networks[deposit.network]!;
+    final networkInfo = networkConfig[deposit.network]!;
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),

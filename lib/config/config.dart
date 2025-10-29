@@ -2,8 +2,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class Config {
   // Backend URL - Using stable production domain that never changes!
-  static const String _newDeploymentUrl = 'https://redstonebackend-ipfcfcoqr-snaps-projects-656f28bb.vercel.app/api';
-  static const String _fallbackUrl = 'https://redstonebackend-aj7xoowmr-snaps-projects-656f28bb.vercel.app/api';
+  static const String _newDeploymentUrl = 'https://red-stone-backend.vercel.app/api';
+  static const String _fallbackUrl = 'https://redstonebackend-6to7wmy13-snaps-projects-656f28bb.vercel.app/api';
   static const String _configKey = 'cached_backend_url';
   static const String _lastUpdateKey = 'config_last_update';
   

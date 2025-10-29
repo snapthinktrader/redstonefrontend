@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
 import '../../utils/app_theme.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/shared_layout.dart';
 import '../../widgets/loading_state_manager.dart';
+import '../../widgets/earnings_projection_chart.dart';
 import '../../services/auth_service.dart';
+import '../../services/realtime_earnings_service.dart';
 import '../../models/user.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -19,12 +22,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   bool _isLoadingStats = true;
   final AuthService _authService = AuthService();
+  final RealTimeEarningsService _earningsService = RealTimeEarningsService();
+  Timer? _realtimeTimer;
   
   // Real data from API
   double _currentBalance = 0.0;
   double _totalDeposits = 0.0;
   double _dailyEarnings = 0.0;
   int _userLevel = 1;
+  int _userReferralLevel = 1;
   Map<String, dynamic>? _userStats;
 
   @override
@@ -32,22 +38,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _loadUserData();
   }
+  
+  @override
+  void dispose() {
+    _realtimeTimer?.cancel();
+    _earningsService.dispose();
+    super.dispose();
+  }
 
   Future<void> _loadUserData() async {
     try {
-      // Load user data and stats in parallel
-      final futures = await Future.wait([
-        _authService.getUser(),
-        _loadUserStats(),
-      ]);
+      // Load fresh user data from API (not cache)
+      await _authService.refreshUserFromAPI();
       
-      final user = futures[0] as User?;
+      // Then get the updated user
+      final user = await _authService.getUser();
       
       if (mounted) {
         setState(() {
           _currentUser = user;
           _isLoading = false;
         });
+        
+        // Load stats after user is set
+        await _loadUserStats();
+        
+        // Start real-time balance updates
+        _startRealtimeUpdates();
       }
     } catch (e) {
       print('Error loading user data: $e');
@@ -59,22 +76,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
   }
+  
+  void _startRealtimeUpdates() {
+    if (_currentUser == null) return;
+    
+    // Cancel any existing timer
+    _realtimeTimer?.cancel();
+    
+    // Update balance every second for real-time effect
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_currentUser != null && mounted) {
+        setState(() {
+          _currentBalance = _earningsService.calculateRealTimeBalance(_currentUser!);
+        });
+      }
+    });
+  }
 
   Future<void> _loadUserStats() async {
     try {
-      // Temporarily disable API call to avoid route not found error
-      // const dashboardData = await _apiService.getUserStats();
-      
-      if (mounted) {
-        setState(() {
-          // _userStats = dashboardData;
-          _isLoadingStats = false;
-          // Use default values for now
-          _currentBalance = 0.0;
-          _totalDeposits = 0.0;
-          _dailyEarnings = 0.0;
-          _userLevel = 1;
-        });
+      // Use _currentUser data if available
+      if (_currentUser != null) {
+        if (mounted) {
+          setState(() {
+            _currentBalance = _currentUser!.walletBalance;
+            _totalDeposits = _currentUser!.totalDeposit;
+            _dailyEarnings = _currentUser!.dailyEarnings;
+            _userLevel = _currentUser!.currentLevel;
+            _userReferralLevel = _currentUser!.referralLevel;
+            _isLoadingStats = false;
+          });
+        }
+      } else {
+        // Fallback to default values if no user data
+        if (mounted) {
+          setState(() {
+            _currentBalance = 0.0;
+            _totalDeposits = 0.0;
+            _dailyEarnings = 0.0;
+            _userLevel = 1;
+            _userReferralLevel = 1;
+            _isLoadingStats = false;
+          });
+        }
       }
     } catch (e) {
       print('Error loading user stats: $e');
@@ -255,30 +299,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildMetricsGrid() {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _buildMetricCard(
-            icon: Icons.attach_money,
-            title: 'Total Deposits',
-            value: '\$${_totalDeposits.toStringAsFixed(2)}',
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                icon: Icons.attach_money,
+                title: 'Total Deposits',
+                value: '\$${_totalDeposits.toStringAsFixed(2)}',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildMetricCard(
+                icon: Icons.trending_up,
+                title: 'Daily Earnings',
+                value: '\$${_dailyEarnings.toStringAsFixed(2)}',
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildMetricCard(
-            icon: Icons.trending_up,
-            title: 'Daily Earnings',
-            value: '\$${_dailyEarnings.toStringAsFixed(2)}',
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildMetricCard(
-            icon: Icons.star_outline,
-            title: 'Level',
-            value: _userLevel.toString(),
-          ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                icon: Icons.diamond,
+                title: 'Deposit Level',
+                value: _currentUser?.levelName ?? 'Basic',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildMetricCard(
+                icon: Icons.group,
+                title: 'Referral Level',
+                value: _currentUser?.referralLevelName ?? 'Level 1',
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -361,78 +421,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildEarningsChart() {
-    // Get earnings data from stats or use default
-    final earningsData = _userStats?['weeklyEarnings'] as List<dynamic>? ?? 
-        [0.3, 0.5, 0.7, 0.6, 0.9, 0.4, 0.8]; // Default chart data
-    
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Last 7 Days Earnings',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF111827),
-                ),
-              ),
-              Icon(
-                Icons.bar_chart,
-                color: AppTheme.primaryColor,
-                size: 20,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          // Simple bar chart
-          Container(
-            height: 160,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: earningsData.asMap().entries.map((entry) {
-                double value = (entry.value is num) ? entry.value.toDouble() : 0.3;
-                return _buildChartBar(value);
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChartBar(double heightFactor) {
-    return Container(
-      width: 32,
-      height: 120 * heightFactor,
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(4),
-          topRight: Radius.circular(4),
-        ),
-      ),
+    return EarningsProjectionChart(
+      currentBalance: _currentBalance,
+      dailyRate: 0.02, // 2% daily
+      daysToProject: 30, // Project next 30 days
     );
   }
 }

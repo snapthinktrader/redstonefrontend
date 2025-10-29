@@ -149,6 +149,11 @@ class _SignupScreenState extends State<SignupScreen> {
         fingerprint['ip'] = 'unknown';
       }
       
+      // IGNORED (per fingerprintchat.txt):
+      // ❌ GPU: "Browser and native app report this differently" 
+      // ❌ Screen Resolution: "Browser viewport ≠ mobile screen"
+      // These are not included to avoid false negatives
+      
       debugPrint('🔍 ENHANCED Fingerprint Collection (fingerprintchat.txt optimized):');
       debugPrint('   ✅ Platform: ${fingerprint['platform']} (Most Reliable)');
       debugPrint('   ✅ User Agent: ${fingerprint['user_agent']}');
@@ -289,9 +294,9 @@ class _SignupScreenState extends State<SignupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Create Account',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textPrimary,
@@ -299,9 +304,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Sign up to get started',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 16,
                   ),
@@ -314,6 +319,19 @@ class _SignupScreenState extends State<SignupScreen> {
                   children: [
                     Expanded(
                       child: CustomTextField(
+                        controller: _firstNameController,
+                        labelText: 'First Name',
+                        prefixIcon: Icons.person_outline,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your first name';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    CustomTextField(
                         controller: _firstNameController,
                         label: 'First Name',
                         prefixIcon: const Icon(Icons.person_outline),
@@ -338,7 +356,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           return null;
                         },
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -432,15 +449,15 @@ class _SignupScreenState extends State<SignupScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.people_outline,
                             color: AppTheme.primaryColor,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
-                          const Text(
+                          Text(
                             'Referral Code (Optional)',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: AppTheme.primaryColor,
                             ),
@@ -459,7 +476,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.check_circle, color: AppTheme.successColor, size: 16),
+                              Icon(Icons.check_circle, color: AppTheme.successColor, size: 16),
                               const SizedBox(width: 4),
                               Text(
                                 'Referred by $_referrerName',
@@ -508,22 +525,22 @@ class _SignupScreenState extends State<SignupScreen> {
                             _acceptedTerms = !_acceptedTerms;
                           });
                         },
-                        child: const Text.rich(
+                        child: Text.rich(
                           TextSpan(
                             text: 'I agree to the ',
-                            style: TextStyle(color: AppTheme.textPrimary),
+                            style: const TextStyle(color: AppTheme.textPrimary),
                             children: [
                               TextSpan(
                                 text: 'Terms of Service',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: AppTheme.primaryColor,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              TextSpan(text: ' and '),
+                              const TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: AppTheme.primaryColor,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -549,15 +566,15 @@ class _SignupScreenState extends State<SignupScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Already have an account? ',
-                      style: TextStyle(color: AppTheme.textPrimary),
+                      style: const TextStyle(color: AppTheme.textPrimary),
                     ),
                     GestureDetector(
                       onTap: () => context.go('/login'),
-                      child: const Text(
+                      child: Text(
                         'Sign In',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppTheme.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),

@@ -160,13 +160,13 @@ class Deposit {
   String get networkDisplayName {
     switch (network.toLowerCase()) {
       case 'ethereum':
-        return 'Ethereum';
+        return 'ERC-20 (Ethereum)';
       case 'bsc':
-        return 'Binance Smart Chain';
+        return 'BEP-20 (BSC)';
       case 'polygon':
-        return 'Polygon';
+        return 'Polygon (MATIC)';
       case 'tron':
-        return 'Tron';
+        return 'TRC-20 (Tron)';
       default:
         return network.toUpperCase();
     }

@@ -64,7 +64,7 @@ class Transaction {
   }
 
   // Helper methods
-  bool get isIncoming => ['DEPOSIT', 'DAILY_EARNING', 'REFERRAL_COMMISSION', 'MILESTONE_BONUS'].contains(type);
+  bool get isIncoming => ['DEPOSIT', 'DAILY_EARNING', 'REFERRAL_COMMISSION', 'MILESTONE_BONUS', 'MANUAL_CREDIT', 'PROMOTIONAL_BONUS', 'SUPPORT_CREDIT'].contains(type);
   
   String get formattedAmount {
     final sign = isIncoming ? '+' : '-';
@@ -83,6 +83,12 @@ class Transaction {
         return 'Referral Bonus';
       case 'MILESTONE_BONUS':
         return 'Milestone Bonus';
+      case 'MANUAL_CREDIT':
+        return 'Manual Credit';
+      case 'PROMOTIONAL_BONUS':
+        return 'Promotional Bonus';
+      case 'SUPPORT_CREDIT':
+        return 'Support Credit';
       default:
         return type;
     }
@@ -152,6 +158,12 @@ class Transaction {
         return Icons.card_giftcard;
       case 'DAILY_EARNING':
         return Icons.attach_money;
+      case 'MANUAL_CREDIT':
+        return Icons.add_circle;
+      case 'PROMOTIONAL_BONUS':
+        return Icons.local_offer;
+      case 'SUPPORT_CREDIT':
+        return Icons.support_agent;
       default:
         return Icons.receipt;
     }

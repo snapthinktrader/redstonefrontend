@@ -60,13 +60,14 @@ class DepositStateService {
     _depositsUpdatedController.add(_currentDeposits);
   }
 
-  /// Get pending deposits
+  /// Get pending deposits (only deposits that are not yet completed)
   List<Deposit> get pendingDeposits {
     return _currentDeposits.where((d) {
       final status = d.status.toUpperCase();
+      // Only include truly pending deposits, NOT confirmed/completed ones
       return status == 'PENDING' || 
-             status == 'CONFIRMED' || 
-             status == 'PENDING_CONFIRMATIONS';
+             status == 'PENDING_CONFIRMATIONS' ||
+             status == 'AWAITING_DEPOSIT';
     }).toList();
   }
 

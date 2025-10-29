@@ -20,24 +20,32 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   bool _isLoading = false;
   bool _isLoadingUser = true;
   User? _currentUser;
+  Map<String, dynamic>? _withdrawalLimits;
   final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _amountController.addListener(() {
+      setState(() {}); // Rebuild to update "You Will Receive" calculation
+    });
   }
 
   Future<void> _loadUserData() async {
     try {
       final user = await _authService.getUser();
+      final limits = await _authService.apiService.getWithdrawalLimits();
+      
       if (mounted) {
         setState(() {
           _currentUser = user;
+          _withdrawalLimits = limits;
           _isLoadingUser = false;
         });
       }
     } catch (e) {
+      print('Error loading user data: $e');
       if (mounted) {
         setState(() {
           _isLoadingUser = false;
@@ -71,26 +79,69 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
       return;
     }
 
+    final amount = double.tryParse(_amountController.text);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid amount'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final networkMap = {
+        'BTC': 'tron',
+        'USDT_ERC20': 'ethereum',
+        'USDT_BEP20': 'bsc',
+        'USDT_TRC20': 'tron',
+        'USDT_POLYGON': 'polygon',
+      };
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Withdrawal request submitted successfully'),
-          backgroundColor: AppTheme.successColor,
-        ),
+      await _authService.apiService.createWithdrawalNew(
+        amount: amount,
+        toAddress: _walletController.text.trim(),
+        network: networkMap[_selectedCrypto] ?? 'bsc',
+        userNotes: 'Withdrawal request from mobile app',
       );
-      
-      context.go('/dashboard');
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Withdrawal request submitted successfully! Pending approval.'),
+            backgroundColor: AppTheme.successColor,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        
+        // Refresh user data
+        await _loadUserData();
+        
+        context.go('/dashboard');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: AppTheme.errorColor,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -182,7 +233,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Time: 5-30 minutes',
+                                  _withdrawalLimits != null 
+                                      ? 'Time: ${_withdrawalLimits!['processingTime']['text']}'
+                                      : 'Time: 1-48 hours',
                                   style: TextStyle(
                                     color: AppTheme.mediumColor,
                                     fontSize: 14,
@@ -194,6 +247,98 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                         ),
                         
                         const SizedBox(height: 32),
+                        
+                        // Tier Information
+                        if (_withdrawalLimits != null)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.primaryColor.withOpacity(0.1),
+                                  AppTheme.secondaryColor.withOpacity(0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppTheme.primaryColor.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.workspace_premium,
+                                      color: AppTheme.primaryColor,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${_withdrawalLimits!['tierName']} Tier',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.darkColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                if (_withdrawalLimits!['nextWithdrawal']['canWithdraw'])
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Withdrawal #${_withdrawalLimits!['nextWithdrawal']['number']}',
+                                        style: TextStyle(
+                                          color: AppTheme.mediumColor,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Max: \$${_withdrawalLimits!['nextWithdrawal']['maxAmount'].toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primaryColor,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                if (!_withdrawalLimits!['nextWithdrawal']['canWithdraw'])
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.errorColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          color: AppTheme.errorColor,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _withdrawalLimits!['nextWithdrawal']['waitingMessage'] ?? 'Please wait',
+                                            style: TextStyle(
+                                              color: AppTheme.errorColor,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        
+                        if (_withdrawalLimits != null) const SizedBox(height: 16),
                         
                         // Available Balance
                         Container(
@@ -307,7 +452,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                         ],
                       ),
                       Text(
-                        'Min: \$10.00',
+                        _withdrawalLimits != null 
+                            ? 'Min: \$${_withdrawalLimits!['minimumWithdrawal'].toStringAsFixed(2)}'
+                            : 'Min: \$100.00',
                         style: TextStyle(
                           color: AppTheme.mediumColor,
                           fontSize: 12,
@@ -340,9 +487,10 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                         isExpanded: true,
                         items: const [
                           DropdownMenuItem(value: 'BTC', child: Text('Bitcoin (BTC)')),
-                          DropdownMenuItem(value: 'ETH', child: Text('Ethereum (ETH)')),
-                          DropdownMenuItem(value: 'USDT', child: Text('Tether (USDT)')),
-                          DropdownMenuItem(value: 'SOL', child: Text('Solana (SOL)')),
+                          DropdownMenuItem(value: 'USDT_ERC20', child: Text('ERC-20 (Ethereum) USDT')),
+                          DropdownMenuItem(value: 'USDT_BEP20', child: Text('BEP-20 (BSC) USDT')),
+                          DropdownMenuItem(value: 'USDT_TRC20', child: Text('TRC-20 (Tron) USDT')),
+                          DropdownMenuItem(value: 'USDT_POLYGON', child: Text('Polygon USDT')),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -409,7 +557,9 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                               ),
                             ),
                             Text(
-                              '0.0005 BTC (~\$15.00)',
+                              _withdrawalLimits != null 
+                                  ? '\$${_withdrawalLimits!['networkFee'].toStringAsFixed(2)}'
+                                  : '\$5.00',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: AppTheme.darkColor,
@@ -427,9 +577,14 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                                 color: AppTheme.mediumColor,
                               ),
                             ),
-                            const Text(
-                              '0.042 BTC (~\$1,269.75)',
-                              style: TextStyle(
+                            Text(
+                              () {
+                                final amount = double.tryParse(_amountController.text) ?? 0;
+                                final fee = _withdrawalLimits?['networkFee'] ?? 5.0;
+                                final netAmount = amount > fee ? amount - fee : 0;
+                                return '\$${netAmount.toStringAsFixed(2)}';
+                              }(),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.primaryColor,
                               ),

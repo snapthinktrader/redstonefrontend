@@ -7,9 +7,13 @@ class User {
   final bool isVerified;
   final String? referralCode;
   final String? referredBy;
-  final int level;
+  final int level; // Deposit-based level (1-8)
+  final int referralLevel; // Referral-based level (1-9)
   final double walletBalance;
   final double totalEarnings;
+  final double pendingEarnings;
+  final double pendingReferralCommission; // Real-time commission earnings
+  final double pendingIndirectCommission; // Real-time indirect commission
   final int directReferrals;
   final int indirectReferrals;
   final double nextBonusAmount;
@@ -22,6 +26,12 @@ class User {
   // Computed properties
   String get name => fullName;
   int get currentLevel => level;
+  
+  // Get actual total earnings (database + pending)
+  double get actualTotalEarnings => totalEarnings + pendingEarnings;
+  
+  // Get total commission earnings (direct + indirect)
+  double get totalCommission => pendingReferralCommission + pendingIndirectCommission;
 
     const User({
     required this.id,
@@ -33,8 +43,12 @@ class User {
     this.referralCode,
     this.referredBy,
     required this.level,
+    required this.referralLevel,
     required this.walletBalance,
     required this.totalEarnings,
+    required this.pendingEarnings,
+    this.pendingReferralCommission = 0.0,
+    this.pendingIndirectCommission = 0.0,
     required this.directReferrals,
     required this.indirectReferrals,
     required this.nextBonusAmount,
@@ -51,13 +65,17 @@ class User {
       email: json['email'] ?? '',
       firstName: json['firstName'] ?? '',
       lastName: json['lastName'] ?? '',
-      fullName: json['fullName'] ?? '${json['firstName'] ?? ''} ${json['lastName'] ?? ''}',
+      fullName: json['fullName'] ?? json['name'] ?? '${json['firstName'] ?? ''} ${json['lastName'] ?? ''}',
       isVerified: json['isVerified'] ?? false,
       referralCode: json['referralCode'],
       referredBy: json['referredBy'],
-      level: json['level'] ?? 1,
+      level: json['currentLevel'] ?? json['level'] ?? 1,  // Deposit-based level
+      referralLevel: json['referralLevel'] ?? 1,  // Referral-based level
       walletBalance: (json['walletBalance'] ?? 0.0).toDouble(),
       totalEarnings: (json['totalEarnings'] ?? 0.0).toDouble(),
+      pendingEarnings: (json['pendingEarnings'] ?? 0.0).toDouble(),
+      pendingReferralCommission: (json['pendingReferralCommission'] ?? 0.0).toDouble(),
+      pendingIndirectCommission: (json['pendingIndirectCommission'] ?? 0.0).toDouble(),
       directReferrals: json['directReferrals'] ?? 0,
       indirectReferrals: json['indirectReferrals'] ?? 0,
       nextBonusAmount: (json['nextBonusAmount'] ?? 100.0).toDouble(),
@@ -71,25 +89,27 @@ class User {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      '_id': id,
       'email': email,
       'firstName': firstName,
       'lastName': lastName,
       'fullName': fullName,
-      'name': name,
       'isVerified': isVerified,
       'referralCode': referralCode,
       'referredBy': referredBy,
       'level': level,
-      'totalDeposit': totalDeposit,
+      'referralLevel': referralLevel,
       'walletBalance': walletBalance,
       'totalEarnings': totalEarnings,
-      'currentLevel': currentLevel,
+      'pendingEarnings': pendingEarnings,
+      'pendingReferralCommission': pendingReferralCommission,
+      'pendingIndirectCommission': pendingIndirectCommission,
       'directReferrals': directReferrals,
-      'twoFactorEnabled': twoFactorEnabled,
       'indirectReferrals': indirectReferrals,
       'nextBonusAmount': nextBonusAmount,
       'nextBonusTarget': nextBonusTarget,
+      'totalDeposit': totalDeposit,
+      'twoFactorEnabled': twoFactorEnabled,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -105,8 +125,12 @@ class User {
     String? referralCode,
     String? referredBy,
     int? level,
+    int? referralLevel,
     double? walletBalance,
     double? totalEarnings,
+    double? pendingEarnings,
+    double? pendingReferralCommission,
+    double? pendingIndirectCommission,
     int? directReferrals,
     int? indirectReferrals,
     double? nextBonusAmount,
@@ -126,8 +150,12 @@ class User {
       referralCode: referralCode ?? this.referralCode,
       referredBy: referredBy ?? this.referredBy,
       level: level ?? this.level,
+      referralLevel: referralLevel ?? this.referralLevel,
       walletBalance: walletBalance ?? this.walletBalance,
       totalEarnings: totalEarnings ?? this.totalEarnings,
+      pendingEarnings: pendingEarnings ?? this.pendingEarnings,
+      pendingReferralCommission: pendingReferralCommission ?? this.pendingReferralCommission,
+      pendingIndirectCommission: pendingIndirectCommission ?? this.pendingIndirectCommission,
       directReferrals: directReferrals ?? this.directReferrals,
       indirectReferrals: indirectReferrals ?? this.indirectReferrals,
       nextBonusAmount: nextBonusAmount ?? this.nextBonusAmount,
@@ -140,41 +168,74 @@ class User {
   }
 
   // Helper methods
-  double get dailyEarnings => walletBalance * 0.02; // 2% daily return
   
+  // Daily earning rate based on deposit level
+  double get dailyEarningRate {
+    const rates = {
+      1: 0.02,  // Basic: 2%
+      2: 0.02,  // Bronze: 2%
+      3: 0.025, // Silver: 2.5%
+      4: 0.03,  // Gold: 3%
+      5: 0.035, // Platinum: 3.5%
+      6: 0.04,  // Diamond: 4%
+      7: 0.045, // Ascendant: 4.5%
+      8: 0.05,  // Radiant: 5%
+    };
+    return rates[level] ?? 0.02;
+  }
+  
+  // Daily earnings based on deposit level rate
+  double get dailyEarnings => walletBalance * dailyEarningRate;
+  
+  // Deposit level name
   String get levelName {
-    switch (level) {
-      case 1:
-        return 'Bronze';
-      case 2:
-        return 'Silver';
-      case 3:
-        return 'Gold';
-      case 4:
-        return 'Platinum';
-      case 5:
-        return 'Diamond';
-      default:
-        return 'Level $level';
-    }
+    const levels = {
+      1: 'Basic',
+      2: 'Bronze',
+      3: 'Silver',
+      4: 'Gold',
+      5: 'Platinum',
+      6: 'Diamond',
+      7: 'Ascendant',
+      8: 'Radiant',
+    };
+    return levels[level] ?? 'Level $level';
   }
 
+  // Direct commission rate based on referral level
   double get commissionRate {
-    switch (level) {
-      case 1:
-        return 0.05; // 5%
-      case 2:
-        return 0.08; // 8%
-      case 3:
-        return 0.12; // 12%
-      case 4:
-        return 0.15; // 15%
-      case 5:
-        return 0.20; // 20%
-      default:
-        return 0.05;
-    }
+    const rates = {
+      1: 0.00,  // Level 1: 0% (no commission)
+      2: 0.15,  // Level 2: 15%
+      3: 0.20,  // Level 3: 20%
+      4: 0.25,  // Level 4: 25%
+      5: 0.30,  // Level 5: 30%
+      6: 0.35,  // Level 6: 35%
+      7: 0.40,  // Level 7: 40%
+      8: 0.45,  // Level 8: 45%
+      9: 0.50,  // Level 9: 50%
+    };
+    return rates[referralLevel] ?? 0.00;
   }
+
+  // Indirect commission rate based on referral level
+  double get indirectCommissionRate {
+    const rates = {
+      1: 0.00,  // Level 1: 0% (no commission)
+      2: 0.02,  // Level 2: 2%
+      3: 0.03,  // Level 3: 3%
+      4: 0.04,  // Level 4: 4%
+      5: 0.05,  // Level 5: 5%
+      6: 0.06,  // Level 6: 6%
+      7: 0.07,  // Level 7: 7%
+      8: 0.08,  // Level 8: 8%
+      9: 0.10,  // Level 9: 10%
+    };
+    return rates[referralLevel] ?? 0.00;
+  }
+  
+  // Referral level name
+  String get referralLevelName => 'Level $referralLevel';
 
   int get totalReferrals => directReferrals + indirectReferrals;
 

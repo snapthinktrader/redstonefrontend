@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../utils/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../models/user.dart';
+import '../settings/change_password_screen.dart';
+import '../settings/two_factor_screen.dart';
+import '../settings/about_redstone_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -17,17 +20,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   User? _currentUser;
   final AuthService _authService = AuthService();
   int _selectedIndex = 3; // Settings tab is selected
-  bool _twoFactorEnabled = true;
-  bool _notificationsEnabled = true;
+  
+  // Dynamic settings from backend
+  Map<String, dynamic>? _userSettings;
+  bool _isLoadingSettings = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadSettings();
   }
 
   Future<void> _loadUserData() async {
     try {
+      // Refresh user data from API to get latest earnings
+      await _authService.refreshUserFromAPI();
+      
+      // Then load the updated data from storage
       final user = await _authService.getUser();
       if (mounted) {
         setState(() {
@@ -36,9 +46,77 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         });
       }
     } catch (e) {
+      print('Error loading user data: $e');
+      // Try loading from storage anyway
+      try {
+        final user = await _authService.getUser();
+        if (mounted) {
+          setState(() {
+            _currentUser = user;
+            _isLoadingUser = false;
+          });
+        }
+      } catch (e2) {
+        if (mounted) {
+          setState(() {
+            _isLoadingUser = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final settingsResponse = await _authService.getSettings();
+      if (mounted && settingsResponse['success'] == true) {
+        setState(() {
+          _userSettings = settingsResponse['data'];
+          _isLoadingSettings = false;
+        });
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoadingSettings = false;
+          });
+        }
+      }
+    } catch (e) {
       if (mounted) {
         setState(() {
-          _isLoadingUser = false;
+          _isLoadingSettings = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleNotifications(bool value) async {
+    setState(() {
+      _userSettings?['notificationSettings']?['push'] = value;
+    });
+
+    try {
+      final response = await _authService.updateNotificationSettings(
+        push: value,
+      );
+
+      if (mounted && response['success'] != true) {
+        // Revert on error
+        setState(() {
+          _userSettings?['notificationSettings']?['push'] = !value;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Failed to update notifications'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Revert on error
+      if (mounted) {
+        setState(() {
+          _userSettings?['notificationSettings']?['push'] = !value;
         });
       }
     }
@@ -145,20 +223,56 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.primaryColor,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          _currentUser?.levelName ?? 'Bronze Member',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
+                                      Row(
+                                        children: [
+                                          // Deposit Level
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.primaryColor,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.diamond, color: Colors.white, size: 12),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  _currentUser?.levelName ?? 'Basic',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(width: 8),
+                                          // Referral Level
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.group, color: Colors.white, size: 12),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  _currentUser?.referralLevelName ?? 'Level 1',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -170,7 +284,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 _buildStatItem('Joined', _currentUser?.joinedTimeAgo ?? 'Unknown'),
-                                _buildStatItem('Total Earned', '\$${(_currentUser?.totalEarnings ?? 0.0).toStringAsFixed(2)}', isEarnings: true),
+                                _buildStatItem('Total Earned', '\$${(_currentUser?.actualTotalEarnings ?? 0.0).toStringAsFixed(2)}', isEarnings: true),
                                 _buildStatItem('Referrals', '${_currentUser?.totalReferrals ?? 0}'),
                               ],
                             ),
@@ -189,43 +303,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         Icons.lock_outline,
                         'Change Password',
                         onTap: () {
-                          // Navigate to change password
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ChangePasswordScreen(),
+                            ),
+                          );
                         },
                       ),
                       _buildSettingItem(
                         Icons.security,
                         'Two-Factor Authentication',
-                        hasSwitch: true,
-                        switchValue: _twoFactorEnabled,
-                        onSwitchChanged: (value) {
-                          setState(() {
-                            _twoFactorEnabled = value;
-                          });
+                        subtitle: _currentUser?.twoFactorEnabled == true
+                            ? 'Enabled'
+                            : 'Disabled',
+                        onTap: () {
+                          if (_currentUser != null) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => TwoFactorScreen(user: _currentUser!),
+                              ),
+                            ).then((_) {
+                              // Reload user data when returning
+                              _loadUserData();
+                            });
+                          }
                         },
                       ),
                       _buildSettingItem(
                         Icons.notifications_outlined,
                         'Notifications',
                         hasSwitch: true,
-                        switchValue: _notificationsEnabled,
-                        onSwitchChanged: (value) {
+                        switchValue: _userSettings?['notificationSettings']?['push'] ?? true,
+                        onSwitchChanged: _toggleNotifications,
+                      ),
+                      _buildSettingItem(
+                        Icons.email_outlined,
+                        'Email Notifications',
+                        hasSwitch: true,
+                        switchValue: _userSettings?['notificationSettings']?['email'] ?? true,
+                        onSwitchChanged: (value) async {
                           setState(() {
-                            _notificationsEnabled = value;
+                            _userSettings?['notificationSettings']?['email'] = value;
                           });
+                          await _authService.updateNotificationSettings(email: value);
                         },
                       ),
                       _buildSettingItem(
                         Icons.help_outline,
                         'Help & Support',
                         onTap: () {
-                          // Navigate to help
+                          // TODO: Navigate to help & support
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Contact support@redstone.com for assistance'),
+                            ),
+                          );
                         },
                       ),
                       _buildSettingItem(
                         Icons.info_outline,
                         'About RedStone',
                         onTap: () {
-                          // Navigate to about
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const AboutRedStoneScreen(),
+                            ),
+                          );
                         },
                       ),
                       _buildSettingItem(
@@ -317,6 +460,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildSettingItem(
     IconData icon,
     String title, {
+    String? subtitle,
     bool hasSwitch = false,
     bool switchValue = false,
     ValueChanged<bool>? onSwitchChanged,
@@ -352,6 +496,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             fontWeight: FontWeight.w500,
           ),
         ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle,
+                style: TextStyle(
+                  color: AppTheme.mediumColor,
+                  fontSize: 12,
+                ),
+              )
+            : null,
         trailing: hasSwitch
             ? Switch(
                 value: switchValue,

@@ -44,23 +44,23 @@ class _DepositScreenState extends State<DepositScreen> with WidgetsBindingObserv
 
   final Map<String, Map<String, String>> _networks = {
     'eth': {
-      'name': 'Ethereum',
-      'symbol': 'ETH',
+      'name': 'ERC-20 (Ethereum)',
+      'symbol': 'USDT',
       'color': '0xFF627EEA',
     },
     'bsc': {
-      'name': 'BSC',
-      'symbol': 'BNB',
+      'name': 'BEP-20 (BSC)',
+      'symbol': 'USDT',
       'color': '0xFFF3BA2F',
     },
     'polygon': {
-      'name': 'Polygon',
-      'symbol': 'MATIC',
+      'name': 'Polygon (MATIC)',
+      'symbol': 'USDT',
       'color': '0xFF8247E5',
     },
     'tron': {
-      'name': 'Tron',
-      'symbol': 'TRX',
+      'name': 'TRC-20 (Tron)',
+      'symbol': 'USDT',
       'color': '0xFFFF0013',
     },
   };
@@ -738,13 +738,14 @@ class _DepositScreenState extends State<DepositScreen> with WidgetsBindingObserv
         
         const SizedBox(height: 20),
         
-        // Cancel Button
-        CustomButton(
-          text: 'Cancel Deposit',
-          onPressed: _cancelDeposit,
-          backgroundColor: Colors.red[100],
-          textColor: Colors.red[700],
-        ),
+        // ✅ Only show Cancel Button if deposit is not CONFIRMED or COMPLETED
+        if (_currentDeposit?.status != 'CONFIRMED' && _currentDeposit?.status != 'COMPLETED')
+          CustomButton(
+            text: 'Cancel Deposit',
+            onPressed: _cancelDeposit,
+            backgroundColor: Colors.red[100],
+            textColor: Colors.red[700],
+          ),
       ],
     );
   }

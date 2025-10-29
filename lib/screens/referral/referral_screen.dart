@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/custom_button.dart';
 import '../../services/auth_service.dart';
+import '../../services/dynamic_link_service.dart';
 import '../../models/user.dart';
 import '../../models/referral.dart';
 
@@ -18,6 +19,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
   int _selectedIndex = 2; // Referrals tab is selected
   bool _isLoadingUser = true;
   bool _isLoadingReferrals = true;
+  bool _isGeneratingLink = false;
   User? _currentUser;
   List<Referral> _referrals = [];
   final AuthService _authService = AuthService();
@@ -80,6 +82,94 @@ class _ReferralScreenState extends State<ReferralScreen> {
         backgroundColor: AppTheme.successColor,
       ),
     );
+  }
+
+  Future<void> _shareReferralLink() async {
+    if (_currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to load user data'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isGeneratingLink = true;
+    });
+
+    try {
+      await DynamicLinkService.instance.shareReferralLink(
+        referralCode: _currentUser!.referralCode ?? '',
+        referrerName: _currentUser!.fullName,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Referral link shared successfully!'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share link: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingLink = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _copyReferralLink() async {
+    if (_currentUser == null) return;
+
+    setState(() {
+      _isGeneratingLink = true;
+    });
+
+    try {
+      final link = await DynamicLinkService.instance.generateReferralLink(
+        referralCode: _currentUser!.referralCode ?? '',
+        referrerName: _currentUser!.fullName,
+      );
+      
+      await Clipboard.setData(ClipboardData(text: link));
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Referral link copied to clipboard!'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to copy link: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingLink = false;
+        });
+      }
+    }
   }
 
   @override
@@ -175,9 +265,64 @@ class _ReferralScreenState extends State<ReferralScreen> {
                             ),
                             const SizedBox(height: 16),
                             CustomButton(
-                              text: 'Share Code',
+                              text: _isGeneratingLink ? 'Generating Link...' : 'Share Referral Link',
                               icon: Icons.share,
-                              onPressed: _shareReferralCode,
+                              onPressed: _isGeneratingLink ? null : _shareReferralLink,
+                              isLoading: _isGeneratingLink,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _shareReferralCode,
+                                    icon: const Icon(
+                                      Icons.copy,
+                                      size: 18,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                    label: const Text(
+                                      'Copy Code',
+                                      style: TextStyle(
+                                        color: AppTheme.primaryColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: AppTheme.primaryColor),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _isGeneratingLink ? null : _copyReferralLink,
+                                    icon: const Icon(
+                                      Icons.link,
+                                      size: 18,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                    label: const Text(
+                                      'Copy Link',
+                                      style: TextStyle(
+                                        color: AppTheme.primaryColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: AppTheme.primaryColor),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -196,9 +341,76 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 _buildStatItem('Direct Referrals', '${_currentUser?.directReferrals ?? 0}'),
-                                _buildStatItem('Total Earnings', '\$${(_currentUser?.totalEarnings ?? 0.0).toStringAsFixed(2)}'),
+                                _buildStatItem('Commission Earned', '\$${(_currentUser?.pendingReferralCommission ?? 0.0).toStringAsFixed(2)}'),
                                 _buildStatItem('Indirect', '${_currentUser?.indirectReferrals ?? 0}'),
                               ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Commission Rates
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    '${_currentUser?.referralLevelName ?? "Level 1"}',
+                                    style: TextStyle(
+                                      color: AppTheme.primaryColor,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      Column(
+                                        children: [
+                                          Text(
+                                            'Direct Commission',
+                                            style: TextStyle(
+                                              color: AppTheme.darkColor.withOpacity(0.6),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${(_currentUser?.commissionRate ?? 0.0) * 100}%',
+                                            style: TextStyle(
+                                              color: AppTheme.primaryColor,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Column(
+                                        children: [
+                                          Text(
+                                            'Indirect Commission',
+                                            style: TextStyle(
+                                              color: AppTheme.darkColor.withOpacity(0.6),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${(_currentUser?.indirectCommissionRate ?? 0.0) * 100}%',
+                                            style: TextStyle(
+                                              color: AppTheme.primaryColor,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 24),
                             Column(

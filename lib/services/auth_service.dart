@@ -215,7 +215,7 @@ class AuthService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/user/profile'),
+        Uri.parse('$baseUrl/users/profile'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -252,7 +252,7 @@ class AuthService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/transactions'),
+        Uri.parse('$baseUrl/transaction'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -268,6 +268,7 @@ class AuthService {
         throw Exception(data['message'] ?? 'Failed to get transactions');
       }
     } catch (e) {
+      print('Transaction error: $e');
       throw Exception('Network error: ${e.toString()}');
     }
   }
@@ -328,6 +329,222 @@ class AuthService {
       return User.fromJson(userData);
     }
     return null;
+  }
+
+  // Refresh user data from API and update local storage
+  Future<void> refreshUserFromAPI() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        // Update local storage with fresh data
+        final userData = data['data']['user'];
+        final storageHelper = StorageHelper();
+        await storageHelper.saveUserData(userData);
+      } else {
+        throw Exception(data['message'] ?? 'Failed to refresh user data');
+      }
+    } catch (e) {
+      print('Error refreshing user data: $e');
+      throw Exception('Network error: ${e.toString()}');
+    }
+  }
+
+  // Change password
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No authentication token found',
+        };
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/users/change-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Password changed successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to change password',
+        };
+      }
+    } catch (e) {
+      print('Change password error: $e');
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Toggle two-factor authentication
+  Future<Map<String, dynamic>> toggle2FA() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No authentication token found',
+        };
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/users/toggle-2fa'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? '2FA toggled successfully',
+          'data': data['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to toggle 2FA',
+        };
+      }
+    } catch (e) {
+      print('Toggle 2FA error: $e');
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Get user settings
+  Future<Map<String, dynamic>> getSettings() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No authentication token found',
+        };
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/settings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'data': data['data']['settings'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to get settings',
+        };
+      }
+    } catch (e) {
+      print('Get settings error: $e');
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
+  }
+
+  // Update notification settings
+  Future<Map<String, dynamic>> updateNotificationSettings({
+    bool? email,
+    bool? sms,
+    bool? push,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No authentication token found',
+        };
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/users/settings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'notificationSettings': {
+            if (email != null) 'email': email,
+            if (sms != null) 'sms': sms,
+            if (push != null) 'push': push,
+          },
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Settings updated successfully',
+          'data': data['data'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to update settings',
+        };
+      }
+    } catch (e) {
+      print('Update settings error: $e');
+      return {
+        'success': false,
+        'message': 'Network error: ${e.toString()}',
+      };
+    }
   }
 
   // Save auth data to local storage

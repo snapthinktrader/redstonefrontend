@@ -16,6 +16,8 @@ import 'utils/app_theme.dart';
 import 'utils/storage_helper.dart';
 import 'utils/performance_optimizer.dart';
 import 'screens/auth_guard.dart';
+import 'services/analytics_service.dart';
+import 'services/dynamic_link_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +25,19 @@ void main() async {
   // Initialize storage before running the app
   final storageHelper = StorageHelper();
   await storageHelper.init();
+  
+  // Initialize analytics (replaces Firebase)
+  try {
+    await AnalyticsService.instance.initialize();
+    print('✅ AnalyticsService initialized (Firebase removed)');
+
+    // Initialize Dynamic Link Service (no-op initialize kept)
+    await DynamicLinkService.instance.initialize();
+    print('✅ Dynamic Link Service initialize() called');
+  } catch (e) {
+    print('⚠️ Analytics/DynamicLink initialization error: $e');
+    print('App will continue without Firebase features');
+  }
   
   // Set performance mode based on device capabilities
   AppPerformanceSettings.setHighPerformanceMode();
