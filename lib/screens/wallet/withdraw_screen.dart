@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/custom_button.dart';
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 import '../../models/user.dart';
 
 class WithdrawScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   User? _currentUser;
   Map<String, dynamic>? _withdrawalLimits;
   final AuthService _authService = AuthService();
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -35,7 +37,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   Future<void> _loadUserData() async {
     try {
       final user = await _authService.getUser();
-      final limits = await _authService.apiService.getWithdrawalLimits();
+      final limits = await _apiService.getWithdrawalLimits();
       
       if (mounted) {
         setState(() {
@@ -103,7 +105,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
         'USDT_POLYGON': 'polygon',
       };
 
-      await _authService.apiService.createWithdrawalNew(
+      await _apiService.createWithdrawalNew(
         amount: amount,
         toAddress: _walletController.text.trim(),
         network: networkMap[_selectedCrypto] ?? 'bsc',
