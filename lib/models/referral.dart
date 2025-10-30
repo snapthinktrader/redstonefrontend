@@ -9,6 +9,8 @@ class Referral {
   final DateTime joinedAt;
   final double refereeDeposit;
   final bool isActive;
+  final double dailyEarnings; // Referral's daily earnings
+  final double myDailyCommission; // Your daily commission from this referral
 
   const Referral({
     required this.id,
@@ -21,6 +23,8 @@ class Referral {
     required this.joinedAt,
     required this.refereeDeposit,
     this.isActive = true,
+    this.dailyEarnings = 0.0,
+    this.myDailyCommission = 0.0,
   });
 
   factory Referral.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,8 @@ class Referral {
       joinedAt: DateTime.parse(json['joinedAt']),
       refereeDeposit: json['refereeDeposit']?.toDouble() ?? 0.0,
       isActive: json['isActive'] ?? true,
+      dailyEarnings: json['dailyEarnings']?.toDouble() ?? 0.0,
+      myDailyCommission: json['myDailyCommission']?.toDouble() ?? 0.0,
     );
   }
 
@@ -50,6 +56,8 @@ class Referral {
       'joinedAt': joinedAt.toIso8601String(),
       'refereeDeposit': refereeDeposit,
       'isActive': isActive,
+      'dailyEarnings': dailyEarnings,
+      'myDailyCommission': myDailyCommission,
     };
   }
 

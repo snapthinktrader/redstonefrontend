@@ -529,8 +529,8 @@ class _ReferralScreenState extends State<ReferralScreen> {
                                 return _buildReferralItem(
                                   referral.fullName,
                                   'Level ${referral.level} • Joined ${referral.joinedTimeAgo}',
-                                  '+\$${referral.earnings.toStringAsFixed(2)}',
-                                  'Deposit: \$${referral.totalDeposit.toStringAsFixed(2)}',
+                                  '\$${referral.myDailyCommission.toStringAsFixed(2)}/day',
+                                  'Their Daily: \$${referral.dailyEarnings.toStringAsFixed(2)}',
                                   isLast: index == _referrals.length - 1,
                                 );
                               }).toList(),
@@ -615,8 +615,8 @@ class _ReferralScreenState extends State<ReferralScreen> {
   Widget _buildReferralItem(
     String name,
     String subtitle,
-    String earnings,
-    String deposit, {
+    String myDailyCommission,
+    String theirDailyEarnings, {
     bool isLast = false,
   }) {
     return Container(
@@ -667,18 +667,19 @@ class _ReferralScreenState extends State<ReferralScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                earnings,
+                myDailyCommission,
                 style: const TextStyle(
                   color: AppTheme.primaryColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
-                deposit,
+                theirDailyEarnings,
                 style: TextStyle(
                   color: AppTheme.mediumColor,
-                  fontSize: 14,
+                  fontSize: 12,
                 ),
               ),
             ],
