@@ -387,7 +387,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               child: Column(
                                 children: [
                                   Text(
-                                    '${_currentUser?.referralLevelName ?? "Level 1"}',
+                                    'Your Level: ${_currentUser?.levelName ?? "Basic"} (${_currentUser?.referralLevelName ?? "Level 1"})',
                                     style: TextStyle(
                                       color: AppTheme.primaryColor,
                                       fontSize: 14,
@@ -559,13 +559,11 @@ class _ReferralScreenState extends State<ReferralScreen> {
                                 final referral = entry.value;
                                 // Calculate lifetime earnings using individual offset
                                 final realtimeLifetimeEarnings = referral.myLifetimeEarnings + (_referralOffsets[referral.id] ?? 0);
-                                // Calculate real-time daily commission (increases as their balance grows)
-                                final realtimeDailyCommission = referral.myDailyCommission + ((_referralOffsets[referral.id] ?? 0) * 86400);
                                 
                                 return _buildReferralItem(
                                   referral.fullName,
                                   'Level ${referral.level} - ${referral.trackLabel} • ${referral.joinedTimeAgo}',
-                                  '\$${realtimeDailyCommission.toStringAsFixed(2)}/day',
+                                  '\$${referral.myDailyCommission.toStringAsFixed(2)}/day',
                                   'Lifetime Earned: \$${realtimeLifetimeEarnings.toStringAsFixed(2)}',
                                   isLast: index == _referrals.length - 1,
                                 );
