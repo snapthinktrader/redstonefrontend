@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/dynamic_link_service.dart';
 import '../../models/user.dart';
 import '../../models/referral.dart';
+import '../settings/about_redstone_screen.dart';
 
 class ReferralScreen extends StatefulWidget {
   const ReferralScreen({super.key});
@@ -27,6 +28,10 @@ class _ReferralScreenState extends State<ReferralScreen> {
   Timer? _realtimeTimer;
   double _realtimeEarningsOffset = 0.0; // Tracks total real-time earnings increase
   Map<String, double> _referralOffsets = {}; // Tracks each referral's individual offset
+  
+  // Milestone tracking
+  Map<String, dynamic>? _milestoneData;
+  bool _isLoadingMilestones = true;
 
   @override
   void initState() {
@@ -65,7 +70,52 @@ class _ReferralScreenState extends State<ReferralScreen> {
     await Future.wait([
       _loadUserData(),
       _loadReferrals(),
+      _loadMilestones(),
     ]);
+  }
+  
+  Future<void> _loadMilestones() async {
+    int retries = 3;
+    int delayMs = 1000;
+    
+    for (int i = 0; i < retries; i++) {
+      try {
+        final milestones = await _authService.getReferralStats();
+        print('📊 Milestone data loaded: ${milestones['milestones']}');
+        if (mounted) {
+          setState(() {
+            _milestoneData = milestones['milestones'];
+            _isLoadingMilestones = false;
+          });
+        }
+        return; // Success, exit retry loop
+      } catch (e) {
+        print('❌ Error loading milestones (attempt ${i + 1}/$retries): $e');
+        
+        if (i < retries - 1) {
+          // Wait before retrying
+          await Future.delayed(Duration(milliseconds: delayMs));
+          delayMs *= 2; // Exponential backoff
+        } else {
+          // Final failure - set empty data to show UI anyway
+          if (mounted) {
+            setState(() {
+              _milestoneData = {
+                'lowerTrack': {
+                  'count': 0,
+                  'next': {'count': 3, 'bonus': 15}
+                },
+                'upperTrack': {
+                  'count': 0,
+                  'next': {'count': 3, 'bonus': 50}
+                }
+              };
+              _isLoadingMilestones = false;
+            });
+          }
+        }
+      }
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -368,13 +418,24 @@ class _ReferralScreenState extends State<ReferralScreen> {
                         decoration: AppTheme.cardDecoration,
                         child: Column(
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildStatItem('Direct Referrals', '${_currentUser?.directReferrals ?? 0}'),
-                                _buildStatItem('Commission Earned', '\$${((_currentUser?.pendingReferralCommission ?? 0.0) + _realtimeEarningsOffset).toStringAsFixed(2)}'),
-                                _buildStatItem('Indirect', '${_currentUser?.indirectReferrals ?? 0}'),
-                              ],
+                            Builder(
+                              builder: (context) {
+                                // Calculate total lifetime earnings from all referrals
+                                double totalLifetimeEarnings = 0.0;
+                                for (var referral in _referrals) {
+                                  totalLifetimeEarnings += referral.myLifetimeEarnings;
+                                  totalLifetimeEarnings += (_referralOffsets[referral.id] ?? 0);
+                                }
+                                
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _buildStatItem('Direct Referrals', '${_currentUser?.directReferrals ?? 0}'),
+                                    _buildStatItem('Commission Earned', '\$${totalLifetimeEarnings.toStringAsFixed(2)}'),
+                                    _buildStatItem('Indirect', '${_currentUser?.indirectReferrals ?? 0}'),
+                                  ],
+                                );
+                              }
                             ),
                             const SizedBox(height: 16),
                             // Commission Rates
@@ -444,48 +505,9 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               ),
                             ),
                             const SizedBox(height: 24),
-                            Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Next Bonus: \$${_currentUser?.nextBonusAmount ?? 100}',
-                                      style: TextStyle(
-                                        color: AppTheme.darkColor,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${_currentUser?.directReferrals ?? 0}/${_currentUser?.nextBonusTarget ?? 10} referrals',
-                                      style: TextStyle(
-                                        color: AppTheme.primaryColor,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.secondaryColor,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: FractionallySizedBox(
-                                    alignment: Alignment.centerLeft,
-                                    widthFactor: (_currentUser?.directReferrals ?? 0) / (_currentUser?.nextBonusTarget ?? 10),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryColor,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            
+                            // Dual Track Milestone System
+                            _buildDualTrackMilestones(),
                           ],
                         ),
                       ),
@@ -718,6 +740,248 @@ class _ReferralScreenState extends State<ReferralScreen> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDualTrackMilestones() {
+    print('🔍 Building milestones: loading=$_isLoadingMilestones, data=$_milestoneData');
+    
+    if (_isLoadingMilestones) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_milestoneData == null) {
+      print('⚠️ Milestone data is null - hiding milestone section');
+      return const SizedBox.shrink(); // Hide if no data
+    }
+
+    final lowerTrack = _milestoneData!['lowerTrack'];
+    final upperTrack = _milestoneData!['upperTrack'];
+    final isUpperTrackUnlocked = (_currentUser?.totalDeposit ?? 0) >= 50;
+    
+    print('✅ Showing milestones: lower=$lowerTrack, upper=$upperTrack, unlocked=$isUpperTrackUnlocked');
+
+    return Column(
+      children: [
+        // Header with info button and milestone level
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Milestone Bonuses',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.darkColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isUpperTrackUnlocked
+                        ? [const Color(0xFF9C27B0), const Color(0xFF7B1FA2)]
+                        : [AppTheme.mediumColor, AppTheme.mediumColor.withOpacity(0.7)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    isUpperTrackUnlocked ? 'Bronze Plus' : 'Bronze',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.info_outline, size: 20, color: AppTheme.primaryColor),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AboutRedStoneScreen(scrollToMilestones: true),
+                  ),
+                );
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // Lower Track (Always Available)
+        _buildMilestoneTrack(
+          title: '💚 Lower Track (\$0-\$49 deposits)',
+          subtitle: 'Always available',
+          trackData: lowerTrack,
+          isLocked: false,
+          color: const Color(0xFF4CAF50),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Upper Track (Bronze+ only)
+        _buildMilestoneTrack(
+          title: '💎 Upper Track (\$50+ deposits)',
+          subtitle: isUpperTrackUnlocked ? 'Unlocked!' : '🔒 Locked (Deposit \$50+ to unlock)',
+          trackData: upperTrack,
+          isLocked: !isUpperTrackUnlocked,
+          color: const Color(0xFF9C27B0),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMilestoneTrack({
+    required String title,
+    required String subtitle,
+    required Map<String, dynamic> trackData,
+    required bool isLocked,
+    required Color color,
+  }) {
+    final count = trackData['count'] ?? 0;
+    final next = trackData['next'];
+    final current = trackData['current'];
+    
+    int nextCount = 3;
+    int nextBonus = 0;
+    double progress = 0.0;
+    
+    if (next != null) {
+      nextCount = next['count'] ?? 3;
+      nextBonus = next['bonus'] ?? 0;
+      progress = count / nextCount;
+    } else if (current != null) {
+      // All milestones achieved
+      nextCount = current['count'] ?? 0;
+      nextBonus = current['bonus'] ?? 0;
+      progress = 1.0;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.1),
+            color.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.mediumColor,
+                        fontStyle: isLocked ? FontStyle.italic : FontStyle.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isLocked)
+                const Icon(Icons.lock, size: 20, color: AppTheme.mediumColor),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Next Bonus: \$$nextBonus',
+                style: TextStyle(
+                  color: isLocked ? AppTheme.mediumColor : AppTheme.darkColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '$count/$nextCount referrals',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Stack(
+            children: [
+              Container(
+                height: 10,
+                decoration: BoxDecoration(
+                  color: AppTheme.secondaryColor,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: progress.clamp(0.0, 1.0),
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isLocked 
+                        ? [AppTheme.mediumColor, AppTheme.mediumColor]
+                        : [color, color.withOpacity(0.7)],
+                    ),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (isLocked)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                '${count} referral${count != 1 ? "s" : ""} tracked but locked',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.mediumColor,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       ),
     );

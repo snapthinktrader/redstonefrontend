@@ -2,8 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/app_theme.dart';
 
-class AboutRedStoneScreen extends StatelessWidget {
-  const AboutRedStoneScreen({super.key});
+class AboutRedStoneScreen extends StatefulWidget {
+  final bool scrollToMilestones;
+  
+  const AboutRedStoneScreen({super.key, this.scrollToMilestones = false});
+
+  @override
+  State<AboutRedStoneScreen> createState() => _AboutRedStoneScreenState();
+}
+
+class _AboutRedStoneScreenState extends State<AboutRedStoneScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _milestonesKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.scrollToMilestones) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToMilestones();
+      });
+    }
+  }
+
+  void _scrollToMilestones() {
+    final context = _milestonesKey.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +63,7 @@ class AboutRedStoneScreen extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         child: Column(
           children: [
             // Header Section
@@ -192,10 +230,12 @@ class AboutRedStoneScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Milestone Bonuses Section
-                  _buildSectionCard(
-                    icon: Icons.emoji_events,
-                    title: 'Milestone Bonuses - Dual Track System',
-                    content: 'Two separate milestone tracks based on referral deposit amounts!',
+                  Container(
+                    key: _milestonesKey,
+                    child: _buildSectionCard(
+                      icon: Icons.emoji_events,
+                      title: 'Milestone Bonuses - Dual Track System',
+                      content: 'Two separate milestone tracks based on referral deposit amounts!',
                     children: [
                       const SizedBox(height: 12),
                       _buildInfoBox(
@@ -225,21 +265,21 @@ class AboutRedStoneScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      _buildMilestoneCard(3, 50),
+                      _buildMilestoneCard(3, 15),
                       const SizedBox(height: 6),
-                      _buildMilestoneCard(10, 100),
+                      _buildMilestoneCard(10, 30),
                       const SizedBox(height: 6),
-                      _buildMilestoneCard(15, 150),
+                      _buildMilestoneCard(15, 45),
                       const SizedBox(height: 6),
-                      _buildMilestoneCard(25, 250),
+                      _buildMilestoneCard(25, 65),
                       const SizedBox(height: 6),
-                      _buildMilestoneCard(50, 750),
+                      _buildMilestoneCard(50, 100),
                       const SizedBox(height: 6),
-                      _buildMilestoneCard(100, 1000),
+                      _buildMilestoneCard(100, 300),
                       const SizedBox(height: 6),
-                      _buildMilestoneCard(500, 5000),
+                      _buildMilestoneCard(500, 1000),
                       const SizedBox(height: 6),
-                      _buildMilestoneCard(1000, 25000),
+                      _buildMilestoneCard(1000, 3500),
                       const SizedBox(height: 16),
                       const Text(
                         '💎 Upper Track (\$50+ Deposits)',
@@ -273,7 +313,7 @@ class AboutRedStoneScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       _buildMilestoneCard(500, 5000),
                       const SizedBox(height: 6),
-                      _buildMilestoneCard(1000, 25000),
+                      _buildMilestoneCard(1000, 10000),
                       const SizedBox(height: 12),
                       _buildInfoBox(
                         '⚡ Key Points',
@@ -284,6 +324,7 @@ class AboutRedStoneScreen extends StatelessWidget {
                         '• Upgrade to Bronze to unlock all tracked upper milestones',
                       ),
                     ],
+                    ),
                   ),
 
                   const SizedBox(height: 16),

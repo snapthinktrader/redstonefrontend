@@ -302,6 +302,34 @@ class AuthService {
     }
   }
 
+  // Get referral stats with milestone tracking
+  Future<Map<String, dynamic>> getReferralStats() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/referral/stats'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data['data'];
+      } else {
+        throw Exception(data['message'] ?? 'Failed to get referral stats');
+      }
+    } catch (e) {
+      throw Exception('Network error: ${e.toString()}');
+    }
+  }
+
   // Logout user
   Future<void> logout() async {
     final storageHelper = StorageHelper();
