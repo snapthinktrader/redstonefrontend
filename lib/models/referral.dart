@@ -11,6 +11,10 @@ class Referral {
   final bool isActive;
   final double dailyEarnings; // Referral's daily earnings
   final double myDailyCommission; // Your daily commission from this referral
+  final double realTimeBalance; // Their real-time balance with pending earnings
+  final double pendingEarnings; // Their pending earnings since last update
+  final double actualEarningsPerSecond; // Their actual $ per second earnings
+  final double myLifetimeEarnings; // Total lifetime earnings from this referral
 
   const Referral({
     required this.id,
@@ -25,6 +29,10 @@ class Referral {
     this.isActive = true,
     this.dailyEarnings = 0.0,
     this.myDailyCommission = 0.0,
+    this.realTimeBalance = 0.0,
+    this.pendingEarnings = 0.0,
+    this.actualEarningsPerSecond = 0.0,
+    this.myLifetimeEarnings = 0.0,
   });
 
   factory Referral.fromJson(Map<String, dynamic> json) {
@@ -41,6 +49,10 @@ class Referral {
       isActive: json['isActive'] ?? true,
       dailyEarnings: json['dailyEarnings']?.toDouble() ?? 0.0,
       myDailyCommission: json['myDailyCommission']?.toDouble() ?? 0.0,
+      realTimeBalance: json['realTimeBalance']?.toDouble() ?? 0.0,
+      pendingEarnings: json['pendingEarnings']?.toDouble() ?? 0.0,
+      actualEarningsPerSecond: json['actualEarningsPerSecond']?.toDouble() ?? 0.0,
+      myLifetimeEarnings: json['myEarningsFromThisUser']?['total']?.toDouble() ?? json['commissionEarned']?.toDouble() ?? 0.0,
     );
   }
 

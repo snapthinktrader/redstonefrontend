@@ -530,7 +530,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                                   referral.fullName,
                                   'Level ${referral.level} • Joined ${referral.joinedTimeAgo}',
                                   '\$${referral.myDailyCommission.toStringAsFixed(2)}/day',
-                                  'Their Daily: \$${referral.dailyEarnings.toStringAsFixed(2)}',
+                                  'Lifetime Earned: \$${referral.myLifetimeEarnings.toStringAsFixed(2)}',
                                   isLast: index == _referrals.length - 1,
                                 );
                               }).toList(),
