@@ -15,6 +15,9 @@ class Referral {
   final double pendingEarnings; // Their pending earnings since last update
   final double actualEarningsPerSecond; // Their actual $ per second earnings
   final double myLifetimeEarnings; // Total lifetime earnings from this referral
+  final String track; // 'lower' or 'upper' track
+  final String trackLabel; // 'Bronze' or 'Bronze Plus'
+  final String? levelName; // Their level name (Bronze, Silver, etc.)
 
   const Referral({
     required this.id,
@@ -33,6 +36,9 @@ class Referral {
     this.pendingEarnings = 0.0,
     this.actualEarningsPerSecond = 0.0,
     this.myLifetimeEarnings = 0.0,
+    this.track = 'lower',
+    this.trackLabel = 'Bronze',
+    this.levelName,
   });
 
   factory Referral.fromJson(Map<String, dynamic> json) {
@@ -53,6 +59,9 @@ class Referral {
       pendingEarnings: json['pendingEarnings']?.toDouble() ?? 0.0,
       actualEarningsPerSecond: json['actualEarningsPerSecond']?.toDouble() ?? 0.0,
       myLifetimeEarnings: json['myEarningsFromThisUser']?['total']?.toDouble() ?? json['commissionEarned']?.toDouble() ?? 0.0,
+      track: json['track'] ?? 'lower',
+      trackLabel: json['trackLabel'] ?? 'Bronze',
+      levelName: json['levelName'],
     );
   }
 

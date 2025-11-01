@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -23,11 +24,41 @@ class _ReferralScreenState extends State<ReferralScreen> {
   User? _currentUser;
   List<Referral> _referrals = [];
   final AuthService _authService = AuthService();
+  Timer? _realtimeTimer;
+  double _realtimeEarningsOffset = 0.0; // Tracks total real-time earnings increase
+  Map<String, double> _referralOffsets = {}; // Tracks each referral's individual offset
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _startRealtimeTimer();
+  }
+
+  @override
+  void dispose() {
+    _realtimeTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startRealtimeTimer() {
+    // Update earnings every second
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          // Calculate total commission per second from all referrals
+          double totalCommissionPerSecond = 0;
+          for (var referral in _referrals) {
+            final commissionPerSecond = referral.myDailyCommission / 86400;
+            totalCommissionPerSecond += commissionPerSecond;
+            
+            // Track individual referral's offset
+            _referralOffsets[referral.id] = (_referralOffsets[referral.id] ?? 0) + commissionPerSecond;
+          }
+          _realtimeEarningsOffset += totalCommissionPerSecond;
+        });
+      }
+    });
   }
 
   Future<void> _loadData() async {
@@ -341,7 +372,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 _buildStatItem('Direct Referrals', '${_currentUser?.directReferrals ?? 0}'),
-                                _buildStatItem('Commission Earned', '\$${(_currentUser?.pendingReferralCommission ?? 0.0).toStringAsFixed(2)}'),
+                                _buildStatItem('Commission Earned', '\$${((_currentUser?.pendingReferralCommission ?? 0.0) + _realtimeEarningsOffset).toStringAsFixed(2)}'),
                                 _buildStatItem('Indirect', '${_currentUser?.indirectReferrals ?? 0}'),
                               ],
                             ),
@@ -526,11 +557,16 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               ..._referrals.asMap().entries.map((entry) {
                                 final index = entry.key;
                                 final referral = entry.value;
+                                // Calculate lifetime earnings using individual offset
+                                final realtimeLifetimeEarnings = referral.myLifetimeEarnings + (_referralOffsets[referral.id] ?? 0);
+                                // Calculate real-time daily commission (increases as their balance grows)
+                                final realtimeDailyCommission = referral.myDailyCommission + ((_referralOffsets[referral.id] ?? 0) * 86400);
+                                
                                 return _buildReferralItem(
                                   referral.fullName,
-                                  'Level ${referral.level} • Joined ${referral.joinedTimeAgo}',
-                                  '\$${referral.myDailyCommission.toStringAsFixed(2)}/day',
-                                  'Lifetime Earned: \$${referral.myLifetimeEarnings.toStringAsFixed(2)}',
+                                  'Level ${referral.level} - ${referral.trackLabel} • ${referral.joinedTimeAgo}',
+                                  '\$${realtimeDailyCommission.toStringAsFixed(2)}/day',
+                                  'Lifetime Earned: \$${realtimeLifetimeEarnings.toStringAsFixed(2)}',
                                   isLast: index == _referrals.length - 1,
                                 );
                               }).toList(),
