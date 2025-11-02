@@ -422,17 +422,84 @@ class _ReferralScreenState extends State<ReferralScreen> {
                               builder: (context) {
                                 // Calculate total lifetime earnings from all referrals
                                 double totalLifetimeEarnings = 0.0;
+                                double totalDailyCommission = 0.0;
                                 for (var referral in _referrals) {
                                   totalLifetimeEarnings += referral.myLifetimeEarnings;
                                   totalLifetimeEarnings += (_referralOffsets[referral.id] ?? 0);
+                                  totalDailyCommission += referral.myDailyCommission;
                                 }
                                 
-                                return Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                return Column(
                                   children: [
-                                    _buildStatItem('Direct Referrals', '${_currentUser?.directReferrals ?? 0}'),
-                                    _buildStatItem('Commission Earned', '\$${totalLifetimeEarnings.toStringAsFixed(2)}'),
-                                    _buildStatItem('Indirect', '${_currentUser?.indirectReferrals ?? 0}'),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                      children: [
+                                        _buildStatItem('Direct Referrals', '${_currentUser?.directReferrals ?? 0}'),
+                                        _buildStatItem('Total Earned', '\$${totalLifetimeEarnings.toStringAsFixed(2)}'),
+                                        _buildStatItem('Indirect', '${_currentUser?.indirectReferrals ?? 0}'),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryColor.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: AppTheme.primaryColor.withOpacity(0.2),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          Column(
+                                            children: [
+                                              Text(
+                                                'Daily Commission',
+                                                style: TextStyle(
+                                                  color: AppTheme.mediumColor,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '\$${totalDailyCommission.toStringAsFixed(2)}/day',
+                                                style: TextStyle(
+                                                  color: AppTheme.primaryColor,
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Container(
+                                            width: 1,
+                                            height: 40,
+                                            color: AppTheme.mediumColor.withOpacity(0.2),
+                                          ),
+                                          Column(
+                                            children: [
+                                              Text(
+                                                'Per Second',
+                                                style: TextStyle(
+                                                  color: AppTheme.mediumColor,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '\$${(totalDailyCommission / 86400).toStringAsFixed(6)}/sec',
+                                                style: TextStyle(
+                                                  color: AppTheme.primaryColor,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 );
                               }
